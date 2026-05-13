@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hyperlink Spam Report</title>
+<style>
+:root {
+  --bg-deep: #0a0e1a;
+  --bg-card: #111827;
+  --bg-card-hover: #1a2332;
+  --border: #1e2d3d;
+  --cyan: #00e5ff;
+  --cyan-dim: #00b8d4;
+  --cyan-glow: rgba(0, 229, 255, 0.15);
+  --amber: #ffab00;
+  --amber-dim: #ff8f00;
+  --amber-glow: rgba(255, 171, 0, 0.15);
+  --red: #ff5252;
+  --text: #e0e6ed;
+  --text-dim: #8899aa;
+  --text-muted: #556677;
+  --ip-bg: rgba(0, 229, 255, 0.08);
+  --ip-border: rgba(0, 229, 255, 0.25);
+  --radius: 8px;
+  --copy-green: #00e676;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Segoe UI', 'Noto Sans TC', sans-serif;
+  background: var(--bg-deep);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+.container { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+
+header {
+  text-align: center;
+  padding: 40px 0 24px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--cyan), var(--amber));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+.report-time {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+}
+.rules {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.rule-tag {
+  background: var(--cyan-glow);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  color: var(--cyan);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+}
+
+.stats-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  text-align: center;
+  animation: fadeSlideUp 0.5s ease both;
+}
+.stat-card:nth-child(1) { animation-delay: 0.05s; }
+.stat-card:nth-child(2) { animation-delay: 0.1s; }
+.stat-card:nth-child(3) { animation-delay: 0.15s; }
+.stat-card:nth-child(4) { animation-delay: 0.2s; }
+.stat-card:nth-child(5) { animation-delay: 0.25s; }
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  display: block;
+}
+.stat-value.cyan { color: var(--cyan); text-shadow: 0 0 20px var(--cyan-glow); }
+.stat-value.amber { color: var(--amber); text-shadow: 0 0 20px var(--amber-glow); }
+.stat-label {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  margin-top: 4px;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.tabs {
+  display: flex;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.tab-btn {
+  padding: 10px 24px;
+  background: transparent;
+  color: var(--text-dim);
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: all 0.25s;
+  position: relative;
+}
+.tab-btn:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+.tab-btn.active {
+  color: var(--cyan);
+  background: var(--cyan-glow);
+}
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 20%;
+  width: 60%;
+  height: 2px;
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan);
+}
+
+.search-box {
+  flex: 1;
+  min-width: 180px;
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.search-box:focus { border-color: var(--cyan-dim); }
+.search-box::placeholder { color: var(--text-muted); }
+
+.sort-select {
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 0.9rem;
+  outline: none;
+  cursor: pointer;
+}
+.sort-select option { background: var(--bg-card); }
+
+.violations-list { display: flex; flex-direction: column; gap: 14px; }
+
+.violation-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  animation: fadeSlideUp 0.4s ease both;
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+.violation-card:hover {
+  border-color: rgba(0, 229, 255, 0.3);
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.05);
+}
+
+.card-body {
+  padding: 16px 18px;
+}
+
+.card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.card-info {
+  flex: 1;
+}
+
+.info-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 2px 0;
+  font-size: 0.92rem;
+}
+.info-label {
+  color: var(--text-dim);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.info-value {
+  color: var(--text);
+  word-break: break-all;
+}
+.info-value a {
+  color: var(--cyan-dim);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.info-value a:hover { color: var(--cyan); text-decoration: underline; }
+
+.copy-btn {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  background: rgba(0, 229, 255, 0.1);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  border-radius: 6px;
+  color: var(--cyan);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.copy-btn:hover {
+  background: rgba(0, 229, 255, 0.2);
+  border-color: var(--cyan);
+}
+.copy-btn.copied {
+  background: rgba(0, 230, 118, 0.15);
+  border-color: var(--copy-green);
+  color: var(--copy-green);
+}
+
+.count-badge {
+  background: var(--amber-glow);
+  color: var(--amber);
+  border: 1px solid rgba(255, 171, 0, 0.3);
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.detail-section {
+  margin-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding-top: 10px;
+}
+.detail-label {
+  color: var(--text-dim);
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.timeline {
+  padding: 0;
+}
+.timeline-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  font-size: 0.9rem;
+}
+.timeline-row:last-child { border-bottom: none; }
+.timeline-user {
+  color: var(--cyan);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.timeline-sep { color: var(--text-muted); }
+.timeline-comment {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+.timeline-datetime {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.timeline-ip {
+  background: var(--ip-bg);
+  border: 1px solid var(--ip-border);
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.78rem;
+  color: var(--cyan-dim);
+  white-space: nowrap;
+}
+
+.articles-section {
+  margin-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding-top: 10px;
+}
+.article-item {
+  padding: 3px 0;
+  font-size: 0.88rem;
+}
+.article-item a {
+  color: var(--cyan-dim);
+  text-decoration: none;
+  word-break: break-all;
+}
+.article-item a:hover { text-decoration: underline; }
+.article-item .article-title {
+  color: var(--text);
+  font-size: 0.85rem;
+  padding-left: 16px;
+}
+
+.no-results {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 60px 20px;
+  font-size: 1.1rem;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+  color: var(--text-dim);
+}
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--cyan);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 12px;
+}
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 640px) {
+  .container { padding: 12px 8px; }
+  header h1 { font-size: 1.5rem; }
+  .stats-bar { grid-template-columns: repeat(2, 1fr); }
+  .card-body { padding: 12px; }
+  .controls { gap: 8px; }
+  .tab-btn { padding: 8px 14px; font-size: 0.85rem; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Hyperlink Spam Report</h1>
+    <div class="report-time" id="reportTime"></div>
+    <div class="rules" id="rules"></div>
+  </header>
+
+  <div class="stats-bar" id="statsBar"></div>
+
+  <div class="controls">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="single">單篇違規</button>
+      <button class="tab-btn" data-tab="cross">跨篇違規</button>
+    </div>
+    <input type="text" class="search-box" id="searchBox" placeholder="搜尋使用者名稱...">
+    <select class="sort-select" id="sortSelect">
+      <option value="count-desc">次數 ↓</option>
+      <option value="count-asc">次數 ↑</option>
+      <option value="time-desc">時間跨度 ↓</option>
+      <option value="time-asc">時間跨度 ↑</option>
+    </select>
+  </div>
+
+  <div class="violations-list" id="violationsList">
+    <div class="loading"><div class="spinner"></div>載入中...</div>
+  </div>
+</div>
+
+<script>
+let reportData = null;
+let currentTab = 'single';
+
+function parseTimeSpan(ts) {
+  if (!ts) return 0;
+  var m = ts.match(/(\d+):(\d+):(\d+)/);
+  if (m) return parseInt(m[1]) * 3600 + parseInt(m[2]) * 60 + parseInt(m[3]);
+  m = ts.match(/(\d+):(\d+)/);
+  if (m) return parseInt(m[1]) * 60 + parseInt(m[2]);
+  return 0;
+}
+
+function renderHeader(data) {
+  document.getElementById('reportTime').textContent = '報告生成時間：' + data.report_time;
+  var rulesEl = document.getElementById('rules');
+  data.rules.forEach(function(r) {
+    var tag = document.createElement('span');
+    tag.className = 'rule-tag';
+    tag.textContent = r;
+    rulesEl.appendChild(tag);
+  });
+}
+
+function renderStats(data) {
+  var s = data.summary;
+  var items = [
+    { value: s.single_violations, label: '單篇違規', cls: 'cyan' },
+    { value: s.cross_violations, label: '跨篇違規', cls: 'amber' },
+    { value: s.single_users, label: '單篇違規使用者', cls: 'cyan' },
+    { value: s.cross_users, label: '跨篇違規使用者', cls: 'amber' },
+    { value: s.total_users, label: '總違規使用者', cls: 'cyan' }
+  ];
+  var bar = document.getElementById('statsBar');
+  bar.innerHTML = '';
+  items.forEach(function(item) {
+    var card = document.createElement('div');
+    card.className = 'stat-card';
+    card.innerHTML = '<span class="stat-value ' + item.cls + '">' + item.value + '</span><div class="stat-label">' + item.label + '</div>';
+    bar.appendChild(card);
+  });
+}
+
+function sortViolations(list, sortBy) {
+  var sorted = list.slice();
+  switch (sortBy) {
+    case 'count-desc': sorted.sort(function(a, b) { return b.count - a.count; }); break;
+    case 'count-asc': sorted.sort(function(a, b) { return a.count - b.count; }); break;
+    case 'time-desc': sorted.sort(function(a, b) { return parseTimeSpan(b.time_span) - parseTimeSpan(a.time_span); }); break;
+    case 'time-asc': sorted.sort(function(a, b) { return parseTimeSpan(a.time_span) - parseTimeSpan(b.time_span); }); break;
+  }
+  return sorted;
+}
+
+function filterViolations(list, query) {
+  if (!query) return list;
+  var q = query.toLowerCase();
+  return list.filter(function(v) { return v.user.toLowerCase().indexOf(q) !== -1; });
+}
+
+function escHtml(str) {
+  var d = document.createElement('div');
+  d.textContent = str || '';
+  return d.innerHTML;
+}
+
+function buildSingleCopyText(v) {
+  var lines = [];
+  lines.push('使用者: ' + v.user);
+  lines.push('文章URL: ' + v.article_url);
+  if (v.article_title) lines.push('文章標題: ' + v.article_title);
+  lines.push('重複次數: ' + v.count + ' 次');
+  lines.push('時間跨度: ' + v.time_span);
+  lines.push('詳細記錄:');
+  v.instances.forEach(function(inst) {
+    var ip = inst.ip || 'N/A';
+    var dt = inst.datetime || 'N/A';
+    lines.push('  ' + inst.user + ': ' + inst.comment + ' - ' + dt + ' (' + ip + ')');
+  });
+  return lines.join('\n');
+}
+
+function buildCrossCopyText(v) {
+  var lines = [];
+  lines.push('使用者: ' + v.user);
+  lines.push('重複次數: ' + v.count + ' 次');
+  lines.push('時間跨度: ' + v.time_span);
+  lines.push('涉及文章 (' + v.articles.length + ' 篇):');
+  v.articles.forEach(function(a) {
+    lines.push('  - ' + a.url);
+    if (a.title) lines.push('    標題: ' + a.title);
+  });
+  lines.push('詳細記錄:');
+  v.instances.forEach(function(inst) {
+    var ip = inst.ip || 'N/A';
+    var dt = inst.datetime || 'N/A';
+    lines.push('  ' + inst.user + ': ' + inst.comment + ' - ' + dt + ' (' + ip + ')');
+  });
+  return lines.join('\n');
+}
+
+function copyToClipboard(text, btn) {
+  navigator.clipboard.writeText(text).then(function() {
+    var orig = btn.textContent;
+    btn.textContent = '已複製 ✓';
+    btn.classList.add('copied');
+    setTimeout(function() {
+      btn.textContent = orig;
+      btn.classList.remove('copied');
+    }, 1500);
+  });
+}
+
+function renderSingleViolation(v, idx) {
+  var card = document.createElement('div');
+  card.className = 'violation-card';
+  card.style.animationDelay = (idx * 0.04) + 's';
+
+  var body = document.createElement('div');
+  body.className = 'card-body';
+
+  var top = document.createElement('div');
+  top.className = 'card-top';
+
+  var info = document.createElement('div');
+  info.className = 'card-info';
+
+  var row1 = document.createElement('div');
+  row1.className = 'info-row';
+  row1.innerHTML = '<span class="info-label">使用者：</span><span class="info-value" style="color:var(--cyan);font-weight:700;">' + escHtml(v.user) + '</span>';
+  info.appendChild(row1);
+
+  var row2 = document.createElement('div');
+  row2.className = 'info-row';
+  row2.innerHTML = '<span class="info-label">文章URL：</span><span class="info-value"><a href="' + escHtml(v.article_url) + '" target="_blank">' + escHtml(v.article_url) + '</a></span>';
+  info.appendChild(row2);
+
+  if (v.article_title) {
+    var row3 = document.createElement('div');
+    row3.className = 'info-row';
+    row3.innerHTML = '<span class="info-label">文章標題：</span><span class="info-value">' + escHtml(v.article_title) + '</span>';
+    info.appendChild(row3);
+  }
+
+  var row4 = document.createElement('div');
+  row4.className = 'info-row';
+  row4.innerHTML = '<span class="info-label">重複次數：</span><span class="count-badge">' + v.count + ' 次</span>';
+  info.appendChild(row4);
+
+  var row5 = document.createElement('div');
+  row5.className = 'info-row';
+  row5.innerHTML = '<span class="info-label">時間跨度：</span><span class="info-value">' + escHtml(v.time_span) + '</span>';
+  info.appendChild(row5);
+
+  var btn = document.createElement('button');
+  btn.className = 'copy-btn';
+  btn.textContent = '複製';
+  btn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    copyToClipboard(buildSingleCopyText(v), btn);
+  });
+
+  top.appendChild(info);
+  top.appendChild(btn);
+  body.appendChild(top);
+
+  var detailSection = document.createElement('div');
+  detailSection.className = 'detail-section';
+  var detailLabel = document.createElement('div');
+  detailLabel.className = 'detail-label';
+  detailLabel.textContent = '詳細記錄：';
+  detailSection.appendChild(detailLabel);
+
+  var timeline = document.createElement('div');
+  timeline.className = 'timeline';
+  v.instances.forEach(function(inst) {
+    var row = document.createElement('div');
+    row.className = 'timeline-row';
+    row.innerHTML =
+      '<span class="timeline-user">' + escHtml(inst.user) + '</span>' +
+      '<span class="timeline-sep">:</span>' +
+      '<span class="timeline-comment">' + escHtml(inst.comment) + '</span>' +
+      '<span class="timeline-datetime">' + escHtml(inst.datetime) + '</span>' +
+      (inst.ip ? '<span class="timeline-ip">' + escHtml(inst.ip) + '</span>' : '');
+    timeline.appendChild(row);
+  });
+  detailSection.appendChild(timeline);
+  body.appendChild(detailSection);
+
+  card.appendChild(body);
+  return card;
+}
+
+function renderCrossViolation(v, idx) {
+  var card = document.createElement('div');
+  card.className = 'violation-card';
+  card.style.animationDelay = (idx * 0.04) + 's';
+
+  var body = document.createElement('div');
+  body.className = 'card-body';
+
+  var top = document.createElement('div');
+  top.className = 'card-top';
+
+  var info = document.createElement('div');
+  info.className = 'card-info';
+
+  var row1 = document.createElement('div');
+  row1.className = 'info-row';
+  row1.innerHTML = '<span class="info-label">使用者：</span><span class="info-value" style="color:var(--cyan);font-weight:700;">' + escHtml(v.user) + '</span>';
+  info.appendChild(row1);
+
+  var row2 = document.createElement('div');
+  row2.className = 'info-row';
+  row2.innerHTML = '<span class="info-label">重複次數：</span><span class="count-badge">' + v.count + ' 次</span>';
+  info.appendChild(row2);
+
+  var row3 = document.createElement('div');
+  row3.className = 'info-row';
+  row3.innerHTML = '<span class="info-label">時間跨度：</span><span class="info-value">' + escHtml(v.time_span) + '</span>';
+  info.appendChild(row3);
+
+  var btn = document.createElement('button');
+  btn.className = 'copy-btn';
+  btn.textContent = '複製';
+  btn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    copyToClipboard(buildCrossCopyText(v), btn);
+  });
+
+  top.appendChild(info);
+  top.appendChild(btn);
+  body.appendChild(top);
+
+  if (v.articles && v.articles.length) {
+    var articlesSection = document.createElement('div');
+    articlesSection.className = 'articles-section';
+    var articlesLabel = document.createElement('div');
+    articlesLabel.className = 'detail-label';
+    articlesLabel.textContent = '涉及文章 (' + v.articles.length + ' 篇)：';
+    articlesSection.appendChild(articlesLabel);
+
+    v.articles.forEach(function(a) {
+      var item = document.createElement('div');
+      item.className = 'article-item';
+      item.innerHTML = '<a href="' + escHtml(a.url) + '" target="_blank">' + escHtml(a.url) + '</a>' +
+        (a.title ? '<div class="article-title">標題: ' + escHtml(a.title) + '</div>' : '');
+      articlesSection.appendChild(item);
+    });
+    body.appendChild(articlesSection);
+  }
+
+  var detailSection = document.createElement('div');
+  detailSection.className = 'detail-section';
+  var detailLabel = document.createElement('div');
+  detailLabel.className = 'detail-label';
+  detailLabel.textContent = '詳細記錄：';
+  detailSection.appendChild(detailLabel);
+
+  var timeline = document.createElement('div');
+  timeline.className = 'timeline';
+  v.instances.forEach(function(inst) {
+    var row = document.createElement('div');
+    row.className = 'timeline-row';
+    row.innerHTML =
+      '<span class="timeline-user">' + escHtml(inst.user) + '</span>' +
+      '<span class="timeline-sep">:</span>' +
+      '<span class="timeline-comment">' + escHtml(inst.comment) + '</span>' +
+      '<span class="timeline-datetime">' + escHtml(inst.datetime) + '</span>' +
+      (inst.ip ? '<span class="timeline-ip">' + escHtml(inst.ip) + '</span>' : '');
+    timeline.appendChild(row);
+  });
+  detailSection.appendChild(timeline);
+  body.appendChild(detailSection);
+
+  card.appendChild(body);
+  return card;
+}
+
+function renderViolations() {
+  var listEl = document.getElementById('violationsList');
+  listEl.innerHTML = '';
+
+  var data = currentTab === 'single' ? reportData.single_article_violations : reportData.cross_article_violations;
+  var query = document.getElementById('searchBox').value.trim();
+  var sortBy = document.getElementById('sortSelect').value;
+
+  var filtered = filterViolations(data, query);
+  var sorted = sortViolations(filtered, sortBy);
+
+  if (sorted.length === 0) {
+    listEl.innerHTML = '<div class="no-results">沒有符合條件的違規記錄</div>';
+    return;
+  }
+
+  var renderFn = currentTab === 'single' ? renderSingleViolation : renderCrossViolation;
+  sorted.forEach(function(v, i) {
+    listEl.appendChild(renderFn(v, i));
+  });
+}
+
+document.querySelectorAll('.tab-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    currentTab = btn.dataset.tab;
+    renderViolations();
+  });
+});
+
+document.getElementById('searchBox').addEventListener('input', renderViolations);
+document.getElementById('sortSelect').addEventListener('change', renderViolations);
+
+fetch('/api/report')
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    reportData = data;
+    renderHeader(data);
+    renderStats(data);
+    renderViolations();
+  })
+  .catch(function(err) {
+    document.getElementById('violationsList').innerHTML =
+      '<div class="no-results">載入失敗：' + escHtml(err.message) + '</div>';
+  });
+</script>
+</body>
+</html>
