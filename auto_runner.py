@@ -58,7 +58,7 @@ def run_script(script_name):
     try:
         if script_name == "scraper.py":
             process = subprocess.run(
-                [sys.executable, script_name],
+                [sys.executable, script_name, "--start-index", "4000"],
                 universal_newlines=True,
                 check=True,
             )

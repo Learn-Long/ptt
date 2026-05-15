@@ -7,6 +7,7 @@ import time
 import concurrent.futures
 from datetime import datetime, timedelta
 import re
+import argparse
 
 BASE_URL = "https://www.ptt.cc/bbs/HatePolitics/index{}.html"
 BOARD_URL = "https://www.ptt.cc/bbs/HatePolitics/index.html"
@@ -110,7 +111,17 @@ def read_last_index():
     except (FileNotFoundError, ValueError):
         return None
 
-def get_start_index():
+def parse_args():
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument('--start-index', type=int, default=None)
+    return parser.parse_known_args()[0]
+
+def get_start_index(args=None):
+    if args and args.start_index is not None:
+        print(f"使用命令列指定起始索引: {args.start_index}")
+        save_last_index(args.start_index)
+        return args.start_index
+
     suggested = estimate_seven_day_index()
     interactive = sys.stdin.isatty()
 
@@ -162,7 +173,7 @@ def get_start_index():
     print("錯誤：無法自動決定起始索引，且無歷史記錄可用。請手動執行。")
     sys.exit(1)
 
-START_INDEX = get_start_index()
+START_INDEX = get_start_index(parse_args())
 
 def fetch_page(url):
     """Fetches the HTML content of a given URL."""

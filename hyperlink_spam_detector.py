@@ -388,9 +388,19 @@ def main():
 
         json_output_file = 'hyperlink_spam_report.json'
         tmp_output_file = json_output_file + '.tmp'
-        with open(tmp_output_file, 'w', encoding='utf-8') as jf:
-            json.dump(json_report, jf, ensure_ascii=False, indent=2)
-        os.replace(tmp_output_file, json_output_file)
+        try:
+            with open(tmp_output_file, 'w', encoding='utf-8') as jf:
+                json.dump(json_report, jf, ensure_ascii=False, indent=2)
+            os.replace(tmp_output_file, json_output_file)
+        except OSError:
+            try:
+                with open(json_output_file, 'w', encoding='utf-8') as jf:
+                    json.dump(json_report, jf, ensure_ascii=False, indent=2)
+                if os.path.exists(tmp_output_file):
+                    os.remove(tmp_output_file)
+                print("警告：原子寫入失敗，已改用直接寫入模式。")
+            except IOError as e2:
+                print(f"寫入 JSON 報告失敗: {e2}")
         print(f"JSON報告已儲存到 '{json_output_file}'")
 
     except IOError as e:
