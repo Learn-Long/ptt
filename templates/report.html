@@ -389,6 +389,8 @@ header h1 {
     </div>
     <input type="text" class="search-box" id="searchBox" placeholder="搜尋使用者名稱...">
     <select class="sort-select" id="sortSelect">
+      <option value="date-desc">日期 ↓</option>
+      <option value="date-asc">日期 ↑</option>
       <option value="count-desc">次數 ↓</option>
       <option value="count-asc">次數 ↑</option>
       <option value="time-desc">時間跨度 ↓</option>
@@ -412,6 +414,23 @@ function parseTimeSpan(ts) {
   m = ts.match(/(\d+):(\d+)/);
   if (m) return parseInt(m[1]) * 60 + parseInt(m[2]);
   return 0;
+}
+
+function parseDatetime(dt) {
+  if (!dt) return 0;
+  var m = dt.match(/(\d+)\/(\d+)\s+(\d+):(\d+)/);
+  if (m) return parseInt(m[1]) * 1000000 + parseInt(m[2]) * 10000 + parseInt(m[3]) * 100 + parseInt(m[4]);
+  return 0;
+}
+
+function getLatestDatetime(v) {
+  if (!v.instances || !v.instances.length) return 0;
+  var max = 0;
+  v.instances.forEach(function(inst) {
+    var val = parseDatetime(inst.datetime);
+    if (val > max) max = val;
+  });
+  return max;
 }
 
 function renderHeader(data) {
@@ -447,6 +466,8 @@ function renderStats(data) {
 function sortViolations(list, sortBy) {
   var sorted = list.slice();
   switch (sortBy) {
+    case 'date-desc': sorted.sort(function(a, b) { return getLatestDatetime(b) - getLatestDatetime(a); }); break;
+    case 'date-asc': sorted.sort(function(a, b) { return getLatestDatetime(a) - getLatestDatetime(b); }); break;
     case 'count-desc': sorted.sort(function(a, b) { return b.count - a.count; }); break;
     case 'count-asc': sorted.sort(function(a, b) { return a.count - b.count; }); break;
     case 'time-desc': sorted.sort(function(a, b) { return parseTimeSpan(b.time_span) - parseTimeSpan(a.time_span); }); break;

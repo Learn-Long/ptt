@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import json
 import os
+import sys
 import time
 import concurrent.futures
 from datetime import datetime, timedelta
@@ -93,29 +94,73 @@ def estimate_seven_day_index():
     print(f"估算完成（共 {attempts} 次查詢）")
     return suggested
 
+LAST_INDEX_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "last_index.txt")
+
+def save_last_index(index):
+    try:
+        with open(LAST_INDEX_FILE, 'w', encoding='utf-8') as f:
+            f.write(str(index))
+    except IOError as e:
+        print(f"無法寫入 last_index.txt: {e}")
+
+def read_last_index():
+    try:
+        with open(LAST_INDEX_FILE, 'r', encoding='utf-8') as f:
+            return int(f.read().strip())
+    except (FileNotFoundError, ValueError):
+        return None
+
 def get_start_index():
     suggested = estimate_seven_day_index()
-    while True:
-        if suggested is not None:
-            prompt = f"近七天文章建議起始索引: {suggested}\n請輸入起始索引（直接按 Enter 採用建議值）: "
-        else:
-            prompt = "請輸入起始索引: "
-        user_input = input(prompt).strip()
-        if user_input == "":
+    interactive = sys.stdin.isatty()
+
+    if interactive:
+        while True:
             if suggested is not None:
-                print(f"採用建議值: {suggested}")
-                return suggested
+                prompt = f"近七天文章建議起始索引: {suggested}\n請輸入起始索引（直接按 Enter 採用建議值）: "
             else:
-                print("無建議值可用，請輸入一個數字。")
-                continue
-        try:
-            start_index = int(user_input)
-            if start_index > 0:
-                return start_index
-            else:
-                print("起始索引必須是正整數。")
-        except ValueError:
-            print("無效的輸入。請輸入一個整數。")
+                prompt = "請輸入起始索引: "
+            user_input = input(prompt).strip()
+            if user_input == "":
+                if suggested is not None:
+                    print(f"採用建議值: {suggested}")
+                    save_last_index(suggested)
+                    return suggested
+                else:
+                    print("無建議值可用，請輸入一個數字。")
+                    continue
+            try:
+                start_index = int(user_input)
+                if start_index > 0:
+                    save_last_index(start_index)
+                    return start_index
+                else:
+                    print("起始索引必須是正整數。")
+            except ValueError:
+                print("無效的輸入。請輸入一個整數。")
+
+    # Non-interactive (cronjob) mode
+    if suggested is not None:
+        print(f"自動採用建議值: {suggested}")
+        save_last_index(suggested)
+        return suggested
+
+    persisted = read_last_index()
+    if persisted is not None:
+        print(f"建議值不可用，使用上次記錄的索引: {persisted}")
+        return persisted
+
+    print("無歷史記錄，嘗試重新取得最新索引...")
+    time.sleep(2)
+    latest = get_latest_index()
+    if latest is not None:
+        fallback = max(1, latest - 200)
+        print(f"使用回退值: {fallback} (最新索引 {latest} - 200)")
+        save_last_index(fallback)
+        return fallback
+
+    print("錯誤：無法自動決定起始索引，且無歷史記錄可用。請手動執行。")
+    sys.exit(1)
 
 START_INDEX = get_start_index()
 
