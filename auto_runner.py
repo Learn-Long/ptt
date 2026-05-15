@@ -59,14 +59,14 @@ def run_script(script_name):
         if script_name == "scraper.py":
             process = subprocess.run(
                 [sys.executable, script_name],
-                text=True,
+                universal_newlines=True,
                 check=True,
             )
         else:
             process = subprocess.run(
                 [sys.executable, script_name],
                 check=True,
-                text=True,
+                universal_newlines=True,
             )
         print(f"--- {script_name} 執行完畢 ---")
         return True

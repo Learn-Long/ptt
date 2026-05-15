@@ -71,9 +71,9 @@ def run_script(script_name, script_index=None):
         if script_name == "data_extractor.py":
             print("注意: data_extractor.py 的輸出將直接列印到控制台。")
             print("在原始 main.py 流程中，其輸出可能被重導向到 user_ip_url_records.json。")
-            process = subprocess.run([sys.executable, script_name], check=True, text=True, capture_output=False)
+            process = subprocess.run([sys.executable, script_name], check=True, universal_newlines=True, capture_output=False)
         else:
-            process = subprocess.run([sys.executable, script_name], check=True, text=True, capture_output=False)
+            process = subprocess.run([sys.executable, script_name], check=True, universal_newlines=True, capture_output=False)
         print(f"--- {script_name} 執行完畢 ---")
         return True
     except subprocess.CalledProcessError as e:

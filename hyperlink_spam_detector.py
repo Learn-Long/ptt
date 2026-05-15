@@ -240,8 +240,8 @@ def main():
                                 break  # 找到一個符合條件的窗口即可
 
     # 排序結果
-    single_article_violations.sort(key=lambda x: (x['user'], x['article_url']))
-    cross_article_violations.sort(key=lambda x: x['user'])
+    single_article_violations.sort(key=lambda x: max(inst['datetime'] for inst in x['instances'] if inst['datetime']), reverse=True)
+    cross_article_violations.sort(key=lambda x: max(inst['datetime'] for inst in x['instances'] if inst['datetime']), reverse=True)
 
     # 生成報告
     print(f"\n生成報告...")
@@ -273,7 +273,7 @@ def main():
                     outfile.write(f"時間跨度: {v['time_span']}\n")
                     outfile.write(f"詳細記錄:\n")
                     for inst in v['instances']:
-                        dt_str = inst['datetime'].strftime('%m/%d %H:%M') if inst['datetime'] else 'N/A'
+                        dt_str = inst['datetime'].strftime('%Y/%m/%d %H:%M') if inst['datetime'] else 'N/A'
                         outfile.write(f"  {v['user']}: {inst['comment']} - {dt_str} ({inst['ip'] or 'N/A'})\n")
                     outfile.write("-" * 80 + "\n\n")
 
@@ -301,7 +301,7 @@ def main():
                     
                     outfile.write(f"詳細記錄:\n")
                     for inst in v['instances']:
-                        dt_str = inst['datetime'].strftime('%m/%d %H:%M') if inst['datetime'] else 'N/A'
+                        dt_str = inst['datetime'].strftime('%Y/%m/%d %H:%M') if inst['datetime'] else 'N/A'
                         outfile.write(f"  {v['user']}: {inst['comment']} - {dt_str} ({inst['ip'] or 'N/A'})\n")
                     outfile.write("-" * 80 + "\n\n")
 
@@ -337,7 +337,7 @@ def main():
                     {
                         'user': inst.get('user', v['user']),
                         'comment': inst['comment'],
-                        'datetime': inst['datetime'].strftime('%m/%d %H:%M') if inst['datetime'] else '',
+                        'datetime': inst['datetime'].strftime('%Y/%m/%d %H:%M') if inst['datetime'] else '',
                         'ip': inst.get('ip', '') or ''
                     }
                     for inst in v['instances']
@@ -361,7 +361,7 @@ def main():
                     {
                         'user': inst.get('user', v['user']),
                         'comment': inst['comment'],
-                        'datetime': inst['datetime'].strftime('%m/%d %H:%M') if inst['datetime'] else '',
+                        'datetime': inst['datetime'].strftime('%Y/%m/%d %H:%M') if inst['datetime'] else '',
                         'ip': inst.get('ip', '') or '',
                         'article_url': inst.get('article_url', '')
                     }
