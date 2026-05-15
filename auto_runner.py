@@ -56,18 +56,11 @@ def check_dependencies(script_config):
 def run_script(script_name):
     print(f"\n--- 正在執行 {script_name} ---")
     try:
-        if script_name == "scraper.py":
-            process = subprocess.run(
-                [sys.executable, script_name, "--start-index", "4000"],
-                universal_newlines=True,
-                check=True,
-            )
-        else:
-            process = subprocess.run(
-                [sys.executable, script_name],
-                check=True,
-                universal_newlines=True,
-            )
+        process = subprocess.run(
+            [sys.executable, script_name],
+            check=True,
+            universal_newlines=True,
+        )
         print(f"--- {script_name} 執行完畢 ---")
         return True
     except subprocess.CalledProcessError as e:
@@ -94,8 +87,32 @@ def cleanup_output_index_files():
     print(f"已清理 output/ 目錄中的 {deleted} 個索引 JSON 檔案。")
 
 
+def cleanup_old_data():
+    if os.path.exists("processed_urls.txt"):
+        try:
+            os.remove("processed_urls.txt")
+            print("已清理 processed_urls.txt。")
+        except OSError as e:
+            print(f"刪除 processed_urls.txt 失敗: {e}")
+
+    word_dir = os.path.join("output", "word")
+    if os.path.exists(word_dir):
+        deleted = 0
+        for filename in os.listdir(word_dir):
+            filepath = os.path.join(word_dir, filename)
+            if os.path.isfile(filepath):
+                try:
+                    os.remove(filepath)
+                    deleted += 1
+                except OSError as e:
+                    print(f"刪除 {filepath} 失敗: {e}")
+        print(f"已清理 output/word/ 目錄中的 {deleted} 個檔案。")
+
+
 def main():
     print("=== PTT 全自動分析流程 ===")
+    print("\n清理上次執行的殘留資料...")
+    cleanup_old_data()
     all_success = True
     for i, script_config in enumerate(SCRIPTS_CONFIG):
         print(f"\n準備執行模組 {i + 1}/{len(SCRIPTS_CONFIG)}: {script_config['name']}")

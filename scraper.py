@@ -230,66 +230,79 @@ def save_to_json(data, index):
         print(f"Error saving file {filepath}: {e}")
 
 def process_index(current_index):
-    """Processes a single index page."""
     json_filepath = os.path.join(OUTPUT_DIR, f"{current_index}.json")
     if os.path.exists(json_filepath):
         print(f"File {json_filepath} already exists. Skipping index {current_index}.")
-        return None # Indicate skip
+        return None
 
     url = BASE_URL.format(current_index)
     print(f"Fetching page: {url}")
     html_content, status_code = fetch_page(url)
 
-    if status_code == 404 or html_content is None and status_code is None: # Stop if 404 or fetch error
-        if status_code == 404:
-            print("Reached 404 page. Stopping.")
-        else: # Fetch error
-            print("Stopping due to fetch error.")
-        return False # Indicate stop
+    if status_code == 404:
+        print(f"Index {current_index}: 404 Not Found. Skipping.")
+        return '404'
 
-    if html_content:
-        articles_data = parse_page(html_content)
-        if articles_data:
-            save_to_json(articles_data, current_index)
-        else:
-            print(f"No articles found on page {current_index}. It might be empty or structured differently.")
+    if html_content is None:
+        print(f"Index {current_index}: fetch error. Skipping.")
+        return 'error'
+
+    articles_data = parse_page(html_content)
+    if articles_data:
+        save_to_json(articles_data, current_index)
     else:
-        # Handle cases where fetch_page returned None but not 404 (e.g., other errors)
-        print(f"Skipping index {current_index} due to fetch issue (not 404).")
+        print(f"No articles found on page {current_index}. It might be empty or structured differently.")
 
-    return True # Indicate success
+    return True
 
 def main():
-    """Main function to control the scraping process with multithreading."""
+    latest_index = get_latest_index()
+    if latest_index is None:
+        print("無法取得最新索引，嘗試使用較大範圍繼續...")
+        latest_index = START_INDEX + 200
+
+    end_index = latest_index
+    total_pages = end_index - START_INDEX + 1
+    print(f"爬取範圍: index {START_INDEX} ~ {end_index} (共 {total_pages} 頁)")
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
         current_index = START_INDEX
-        futures = []
-        stop_requested = False
+        failed_indices = []
+        success_count = 0
+        skip_count = 0
 
-        while not stop_requested:
-            # Submit tasks to the thread pool
-            for i in range(MAX_THREADS * 2): # Submit a batch of tasks
-                if stop_requested:
+        while current_index <= end_index:
+            batch_futures = {}
+            for _ in range(MAX_THREADS * 2):
+                if current_index > end_index:
                     break
                 future = executor.submit(process_index, current_index)
-                futures.append(future)
+                batch_futures[future] = current_index
                 current_index += 1
 
-            # Wait for the tasks to complete
-            for future in concurrent.futures.as_completed(futures):
+            for future in concurrent.futures.as_completed(batch_futures):
+                idx = batch_futures[future]
                 try:
                     result = future.result()
-                    if result is False: # Explicit stop signal
-                        stop_requested = True
-                        break
+                    if result is True:
+                        success_count += 1
+                    elif result is None:
+                        skip_count += 1
+                    elif result in ('404', 'error'):
+                        failed_indices.append(idx)
+                    else:
+                        success_count += 1
                 except Exception as e:
-                    print(f"Exception in worker thread: {e}")
-                    stop_requested = True
-                    break
-            futures = [] # Reset futures for the next batch
+                    print(f"Index {idx} 異常: {e}")
+                    failed_indices.append(idx)
 
-            # Add a small delay to avoid overwhelming the server
             time.sleep(0.2)
+
+    print(f"\n--- 爬取完成 ---")
+    print(f"範圍: {START_INDEX}~{end_index}")
+    print(f"成功: {success_count}, 跳過(已存在): {skip_count}, 失敗: {len(failed_indices)}")
+    if failed_indices:
+        print(f"失敗索引: {failed_indices}")
 
 if __name__ == "__main__":
     main()

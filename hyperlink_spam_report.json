@@ -1,0 +1,44 @@
+{
+  "report_time": "2026-05-16 02:27:56",
+  "rules": [
+    "單篇文章內8小時相同內容 >= 3次",
+    "跨文章8小時內相同內容 >= 5次"
+  ],
+  "summary": {
+    "single_violations": 1,
+    "cross_violations": 0,
+    "single_users": 1,
+    "cross_users": 0,
+    "total_users": 1
+  },
+  "single_article_violations": [
+    {
+      "user": "Yolosnow",
+      "article_url": "https://www.ptt.cc/bbs/HatePolitics/M.1778426416.A.40C.html",
+      "article_title": "[新聞] 藍營大老倒戈？高雄前議長當眾力挺賴瑞",
+      "count": 3,
+      "time_span": "0:01:00",
+      "instances": [
+        {
+          "user": "Yolosnow",
+          "comment": "嗎",
+          "datetime": "2026/05/10 23:28",
+          "ip": "1.172.227.134"
+        },
+        {
+          "user": "Yolosnow",
+          "comment": "嗎",
+          "datetime": "2026/05/10 23:28",
+          "ip": "1.172.227.134"
+        },
+        {
+          "user": "Yolosnow",
+          "comment": "嗎",
+          "datetime": "2026/05/10 23:29",
+          "ip": "1.172.227.134"
+        }
+      ]
+    }
+  ],
+  "cross_article_violations": []
+}

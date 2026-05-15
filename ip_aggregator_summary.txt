@@ -1,4 +1,0 @@
-Processed JSON files: 2380
-Files skipped due to read/decode errors: 0
-Total pushes examined: 69680
-Total new unique User-IP entries added: 5769
