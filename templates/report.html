@@ -191,6 +191,7 @@ header h1 {
 
 .card-top {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   gap: 10px;
   margin-bottom: 10px;
@@ -245,6 +246,19 @@ header h1 {
   background: rgba(0, 230, 118, 0.15);
   border-color: var(--copy-green);
   color: var(--copy-green);
+}
+
+.copy-fallback {
+  flex-basis: 100%;
+  min-height: 120px;
+  padding: 10px;
+  background: var(--bg);
+  border: 1px solid var(--amber);
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  line-height: 1.5;
+  resize: vertical;
 }
 
 .count-badge {
@@ -524,7 +538,7 @@ function buildCrossCopyText(v) {
 }
 
 function copyToClipboard(text, btn) {
-  navigator.clipboard.writeText(text).then(function() {
+  function markCopied() {
     var orig = btn.textContent;
     btn.textContent = '已複製 ✓';
     btn.classList.add('copied');
@@ -532,7 +546,79 @@ function copyToClipboard(text, btn) {
       btn.textContent = orig;
       btn.classList.remove('copied');
     }, 1500);
-  });
+  }
+
+  function copyWithLegacyApi() {
+    var textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.top = '-1000px';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+
+    var copied = false;
+    try {
+      copied = document.execCommand('copy');
+    } catch (error) {
+      copied = false;
+    }
+    document.body.removeChild(textarea);
+    return copied;
+  }
+
+  function showManualCopyFallback() {
+    var existing = btn.parentElement.querySelector('.copy-fallback');
+    if (existing) {
+      existing.focus();
+      existing.select();
+      return;
+    }
+
+    var fallback = document.createElement('textarea');
+    fallback.className = 'copy-fallback';
+    fallback.value = text;
+    fallback.setAttribute('aria-label', '請按 Ctrl+C 複製報告內容');
+    fallback.title = '請按 Ctrl+C 複製報告內容';
+    fallback.addEventListener('click', function() {
+      fallback.select();
+    });
+    btn.parentElement.appendChild(fallback);
+    fallback.focus();
+    fallback.select();
+    btn.textContent = '請手動複製';
+  }
+
+  function handleCopyFailure() {
+    if (copyWithLegacyApi()) {
+      markCopied();
+    } else {
+      showManualCopyFallback();
+    }
+  }
+
+  if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+    var clipboardPromise;
+    try {
+      clipboardPromise = navigator.clipboard.writeText(text);
+    } catch (error) {
+      handleCopyFailure();
+      return;
+    }
+
+    var timeoutPromise = new Promise(function(_, reject) {
+      setTimeout(function() {
+        reject(new Error('Clipboard API timeout'));
+      }, 1000);
+    });
+    Promise.race([clipboardPromise, timeoutPromise])
+      .then(markCopied)
+      .catch(handleCopyFailure);
+  } else {
+    handleCopyFailure();
+  }
 }
 
 function renderSingleViolation(v, idx) {
